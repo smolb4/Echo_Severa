@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 import requests
 import random
 
@@ -7,7 +7,9 @@ TOKEN = "vk1.a.sq5rMHr7_eVlqS9xPvZKC2faTUGZBGT0EeXkSYGIpw1dAe0a6Rrw_hHUSsicD21cR
 GROUP_ID = 235128907
 
 @app.post("/form")
-def form(data: dict):
+async def form(requests: Request):
+    data = await requests.json()
+    
     name = data.get("Имя")
     gender = data.get("Пол")
     age = data.get("Возраст")
