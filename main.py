@@ -72,7 +72,7 @@ async def vk_callback(request: Request):
     # Если ВК проверяет сервер
     if data.get("type") == "confirmation":
         # Код получишь в логах Railway после настройки
-        return "твой_код_подтверждения"
+        return "10707297"
 
     # Если пришло сообщение от виджета
     if data.get("type") == "message_new":
@@ -92,3 +92,4 @@ async def vk_callback(request: Request):
         )
 
     return "ok"
+
