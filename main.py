@@ -85,30 +85,26 @@ async def vk_callback(request: Request):
     # Всегда возвращаем "ok" для ВК
     return "ok"
 
-@app.post("/callback")
+@app.post("/callback", response_class=PlainTextResponse)  # ← ВАЖНО!
 async def vk_callback(request: Request):
-    """Этот endpoint ДОЛЖЕН ВЕРНУТЬ ТОЛЬКО СТРОКУ '10707297' для подтверждения"""
-    
-    # Получаем тело запроса
+    """Возвращаем код подтверждения БЕЗ кавычек"""
     try:
         data = await request.json()
-        # Если это запрос на подтверждение от ВК
         if data.get("type") == "confirmation":
-            # ВАЖНО: возвращаем именно строку, а не JSON!
+            # Возвращаем просто строку, FastAPI не добавит кавычки
             return "10707297"
     except:
-        # Если что-то пошло не так, всё равно возвращаем код
         pass
     
-    # Для всех остальных запросов возвращаем "ok"
+    # Для всех других запросов
     return "ok"
 
 @app.get("/callback")
 async def check_callback():
-    """Этот endpoint только для проверки в браузере"""
+    """Для проверки в браузере - оставляем как есть"""
     return {
         "status": "callback endpoint works",
-        "confirmation_code": "10707297", 
+        "confirmation_code": "10707297",
         "post_url": "https://echosevera-production-5f24.up.railway.app/callback",
         "method": "POST"
     }
