@@ -33,7 +33,7 @@ async def vk_callback(request: Request):
         
         # 1. Подтверждение
         if event_type == "confirmation":
-            return PlainTextResponse("10707297")
+            return PlainTextResponse("744eebe2")
         
         # 2. Новое сообщение
         elif event_type == "message_new":
@@ -321,3 +321,4 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
