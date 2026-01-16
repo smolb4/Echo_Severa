@@ -92,10 +92,12 @@ async def vk_callback(request: Request):
         )
         
 @app.post("/callback")
-async def vk_callback():
-    """Просто возвращаем код подтверждения"""
+async def vk_callback(request: Request):
+    """Просто логируем и возвращаем код"""
+    import json
+    body = await request.body()
+    print(f"Received: {body}")
+    
+    # Всегда возвращаем код
     return "10707297"
-
-    return "ok"
-
 
