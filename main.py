@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.responses import PlainTextResponse
 import requests
 import random
 
@@ -64,25 +65,23 @@ async def form(request: Request):
 
 @app.post("/callback")
 async def vk_callback(request: Request):
-    """Callback для ВК - БЕЗ кавычек в ответе"""
     try:
         data = await request.json()
         
-        # Если ВК проверяет сервер
         if data.get("type") == "confirmation":
-            # ВАЖНО: Возвращаем Response с plain text
-            return Response(content="10707297", media_type="text/plain")
+            # ВОТ ТАК ПРАВИЛЬНО - PlainTextResponse
+            return PlainTextResponse("10707297")
     
     except:
         pass
     
-    # Для всех остальных запросов
-    return Response(content="ok", media_type="text/plain")
+    return PlainTextResponse("ok")
 
 @app.get("/callback")
 async def check():
-    return {"статус": "работает", "код": "10707297"}
+    return {"status": "ok", "code": "10707297"}
 
 @app.get("/")
 async def root():
-    return {"статус": "готов к работе"}
+    return {"status": "VK Bot работает"}
+
