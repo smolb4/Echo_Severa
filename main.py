@@ -7,9 +7,9 @@ TOKEN = "vk1.a.sq5rMHr7_eVlqS9xPvZKC2faTUGZBGT0EeXkSYGIpw1dAe0a6Rrw_hHUSsicD21cR
 GROUP_ID = -235128907
 
 @app.post("/form")
-async def form(requests: Request):
+async def form(request: Request):
     try:
-        data = await requests.json()
+        data = await request.json()
     except:
         return {"error": "Некорректный JSON"}
 
@@ -60,4 +60,35 @@ async def form(requests: Request):
     except Exception as e:
         return {"error": str(e)}
 
+
     return {"ok": True}
+
+
+@app.post("/callback")
+async def vk_callback(request: Request):
+    """Callback от ВКонтакте для виджета Анкеты"""
+    data = await request.json()
+
+    # Если ВК проверяет сервер
+    if data.get("type") == "confirmation":
+        # Код получишь в логах Railway после настройки
+        return "твой_код_подтверждения"
+
+    # Если пришло сообщение от виджета
+    if data.get("type") == "message_new":
+        message = data["object"]["message"]
+        text = message.get("text", "")
+
+        # Отправляем себе как есть
+        requests.post(
+            "https://api.vk.com/method/messages.send",
+            data={
+                "peer_id": 388182166,
+                "message": text,
+                "random_id": random.randint(1, 10 ** 9),
+                "access_token": TOKEN,
+                "v": "5.131"
+            }
+        )
+
+    return "ok"
