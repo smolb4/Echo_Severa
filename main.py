@@ -60,44 +60,27 @@ async def form(request: Request):
     except Exception as e:
         return {"error": str(e)}
 
-
     return {"ok": True}
 
 
 @app.post("/callback")
 async def vk_callback(request: Request):
-    """Callback от ВКонтакте для виджета Анкеты"""
-    data = await request.json()
-
-    # Если ВК проверяет сервер
-    if data.get("type") == "confirmation":
-        # Код получишь в логах Railway после настройки
-        return "10707297"
-
-    # Если пришло сообщение от виджета
-    if data.get("type") == "message_new":
-        message = data["object"]["message"]
-        text = message.get("text", "")
-
-        # Отправляем себе как есть
-        requests.post(
-            "https://api.vk.com/method/messages.send",
-            data={
-                "peer_id": 388182166,
-                "message": text,
-                "random_id": random.randint(1, 10 ** 9),
-                "access_token": TOKEN,
-                "v": "5.131"
-            }
-        )
+    """Callback для ВКонтакте"""
+    try:
+        # Пытаемся прочитать JSON
+        data = await request.json()
         
-@app.post("/callback")
-async def vk_callback(request: Request):
-    """Просто логируем и возвращаем код"""
-    import json
-    body = await request.body()
-    print(f"Received: {body}")
+        # Если это проверка от ВК
+        if data.get("type") == "confirmation":
+            print("VK confirmation request received")
+            return "10707297"  # ← ВОЗВРАЩАЕМ КОД СТРОКОЙ!
+        
+        # Логируем что пришло
+        print(f"VK callback data: {data}")
+        
+    except Exception as e:
+        # Если ошибка - все равно возвращаем код
+        print(f"Error in callback: {e}")
     
-    # Всегда возвращаем код
-    return "10707297"
-
+    # Всегда возвращаем "ok" для ВК
+    return "ok"
