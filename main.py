@@ -90,6 +90,12 @@ async def vk_callback(request: Request):
                 "v": "5.131"
             }
         )
+        
+@app.post("/callback")
+async def vk_callback():
+    """Просто возвращаем код подтверждения"""
+    return "10707297"
 
     return "ok"
+
 
