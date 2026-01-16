@@ -62,38 +62,48 @@ async def form(request: Request):
 
     return {"ok": True}
 
-# ========== CALLBACK ДЛЯ ВК ==========
 @app.post("/callback")
 async def vk_callback(request: Request):
-    """Callback API для ВКонтакте"""
+    """ТОЛЬКО для уведомлений о заполненных анкетах"""
     try:
-        # Пытаемся прочитать JSON
         data = await request.json()
         
-        # Если это запрос подтверждения от ВК
+        # Подтверждение для ВК
         if data.get("type") == "confirmation":
-            # ВОЗВРАЩАЕМ ПРОСТО СТРОКУ БЕЗ JSON!
-            from fastapi.responses import PlainTextResponse
-            return PlainTextResponse("10707297")
+            return "10707297"
+        
+        # Если пришло сообщение
+        if data.get("type") == "message_new":
+            message = data["object"]["message"]
+            text = message.get("text", "")
+            user_id = message.get("from_id", 0)
             
+            # Просто печатаем в логи
+            print(f"Сообщение от {user_id}: {text}")
+            
+            # Если в тексте есть хоть что-то про анкету
+            if any(word in text.lower() for word in ["анкет", "опрос"]):
+                # Отправляем тебе уведомление
+                requests.post(
+                    "https://api.vk.com/method/messages.send",
+                    data={
+                        "peer_id": 388182166,
+                        "message": f"Кто-то заполнил анкету\nID: {user_id}\n\nПроверь виджет 'Анкеты'",
+                        "random_id": random.randint(1, 10**9),
+                        "access_token": TOKEN,
+                        "v": "5.131"
+                    }
+                )
+    
     except:
-        # Если ошибка чтения JSON, всё равно возвращаем код
         pass
     
-    # Для всех остальных запросов возвращаем "ok"
-    return PlainTextResponse("ok")
+    return "ok"
 
 @app.get("/callback")
-async def check_callback():
-    """GET endpoint для проверки в браузере"""
-    return {
-        "status": "callback endpoint works",
-        "confirmation_code": "10707297",
-        "post_url": "https://echosevera-production-5f24.up.railway.app/callback",
-        "method": "POST"
-    }
+async def check():
+    return {"статус": "работает", "код": "10707297"}
 
 @app.get("/")
 async def root():
-    """Главная страница для проверки сервера"""
-    return {"status": "VK Form Bot работает", "timestamp": "2024-01-16"}
+    return {"статус": "готов к работе"}
