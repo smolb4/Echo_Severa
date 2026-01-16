@@ -84,3 +84,13 @@ async def vk_callback(request: Request):
     
     # Всегда возвращаем "ok" для ВК
     return "ok"
+
+@app.get("/callback")
+async def get_callback():
+    """GET endpoint для проверки работы"""
+    return {
+        "status": "callback endpoint works",
+        "confirmation_code": "10707297",
+        "post_url": "https://echosevera-production.up.railway.app/callback",
+        "method": "POST"
+    }
