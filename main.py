@@ -1,4 +1,3 @@
-# main.py
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,7 +20,7 @@ app.add_middleware(
 )
 
 # Настройки из переменных окружения
-TOKEN = os.getenv("VK_TOKEN", "ваш_токен")
+TOKEN = os.getenv("VK_TOKEN", "vk1.a.sq5rMHr7_eVlqS9xPvZKC2faTUGZBGT0EeXkSYGIpw1dAe0a6Rrw_hHUSsicD21cRLAUcGd_hzA_BLd0R37aOa7fGCf9vpPkUwRT9uOJlSiMQHCZz397zimUVgVZz9jgV_OOv5vmX6I5aoRAMfCMm0NEgxMd9UgmFgISq_krk2fBhaWC5S6wjvki3apnVH19xScFwNFkOUELvD0DPJQNyA")
 GROUP_ID = int(os.getenv("VK_GROUP_ID", "235128907"))
 YOUR_ID = int(os.getenv("YOUR_VK_ID", "388182166"))
 
@@ -418,3 +417,4 @@ A: Отличный охотник, плохо плавает"""
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
