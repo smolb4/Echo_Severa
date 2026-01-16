@@ -85,24 +85,30 @@ async def vk_callback(request: Request):
     # Всегда возвращаем "ok" для ВК
     return "ok"
 
+@app.post("/callback")
+async def vk_callback(request: Request):
+    """Этот endpoint ДОЛЖЕН ВЕРНУТЬ ТОЛЬКО СТРОКУ '10707297' для подтверждения"""
+    
+    # Получаем тело запроса
+    try:
+        data = await request.json()
+        # Если это запрос на подтверждение от ВК
+        if data.get("type") == "confirmation":
+            # ВАЖНО: возвращаем именно строку, а не JSON!
+            return "10707297"
+    except:
+        # Если что-то пошло не так, всё равно возвращаем код
+        pass
+    
+    # Для всех остальных запросов возвращаем "ok"
+    return "ok"
+
 @app.get("/callback")
-async def get_callback():
-    """GET endpoint для проверки работы"""
+async def check_callback():
+    """Этот endpoint только для проверки в браузере"""
     return {
         "status": "callback endpoint works",
-        "confirmation_code": "10707297",
-        "post_url": "https://echosevera-production.up.railway.app/callback",
+        "confirmation_code": "10707297", 
+        "post_url": "https://echosevera-production-5f24.up.railway.app/callback",
         "method": "POST"
     }
-    
-@app.get("/")
-async def root():
-    return {"message": "Server is running"}
-
-@app.post("/callback")
-async def callback():
-    return "10707297"
-
-@app.get("/callback")
-async def callback_get():
-    return {"code": "10707297", "test": "OK"}
