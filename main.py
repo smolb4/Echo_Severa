@@ -14,7 +14,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 # =================== КОНФИГУРАЦИЯ ===================
 # ВАЖНО: Используем os.environ.get() для Railway
-TOKEN = os.environ.get("VK_TOKEN", "")
+TOKEN = os.environ.get("VK_TOKEN", "vk1.a.sq5rMHr7_eVlqS9xPvZKC2faTUGZBGT0EeXkSYGIpw1dAe0a6Rrw_hHUSsicD21cRLAUcGd_hzA_BLd0R37aOa7fGCf9vpPkUwRT9uOJlSiMQHCZz397zimUVgVZz9jgV_OOv5vmX6I5aoRAMfCMm0NEgxMd9UgmFgISq_krk2fBhaWC5S6wjvki3apnVH19xScFwNFkOUELvD0DPJQNyA")
 GROUP_ID = int(os.environ.get("VK_GROUP_ID", "235128907"))
 YOUR_ID = int(os.environ.get("YOUR_VK_ID", "388182166"))
 CHAT_PEER_ID = int(os.environ.get("CHAT_PEER_ID", "2000000001"))
@@ -511,3 +511,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     print(f"\n🌐 Запуск сервера на порту {port}...")
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+
