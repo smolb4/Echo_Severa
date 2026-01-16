@@ -94,3 +94,15 @@ async def get_callback():
         "post_url": "https://echosevera-production.up.railway.app/callback",
         "method": "POST"
     }
+    
+@app.get("/")
+async def root():
+    return {"message": "Server is running"}
+
+@app.post("/callback")
+async def callback():
+    return "10707297"
+
+@app.get("/callback")
+async def callback_get():
+    return {"code": "10707297", "test": "OK"}
