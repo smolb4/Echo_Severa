@@ -7,7 +7,7 @@ import sys
 
 app = FastAPI()
 TOKEN = "vk1.a.sq5rMHr7_eVlqS9xPvZKC2faTUGZBGT0EeXkSYGIpw1dAe0a6Rrw_hHUSsicD21cRLAUcGd_hzA_BLd0R37aOa7fGCf9vpPkUwRT9uOJlSiMQHCZz397zimUVgVZz9jgV_OOv5vmX6I5aoRAMfCMm0NEgxMd9UgmFgISq_krk2fBhaWC5S6wjvki3apnVH19xScFwNFkOUELvD0DPJQNyA"
-GROUP_ID = -235128907
+GROUP_ID = 235128907
 
 # Принудительный сброс буфера логов
 import functools
@@ -213,3 +213,4 @@ async def check():
 @app.get("/")
 async def root():
     return {"статус": "VK Bot активен"}
+
