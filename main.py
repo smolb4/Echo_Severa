@@ -64,41 +64,20 @@ async def form(request: Request):
 
 @app.post("/callback")
 async def vk_callback(request: Request):
-    """ТОЛЬКО для уведомлений о заполненных анкетах"""
+    """Callback для ВК - БЕЗ кавычек в ответе"""
     try:
         data = await request.json()
         
-        # Подтверждение для ВК
+        # Если ВК проверяет сервер
         if data.get("type") == "confirmation":
-            return "10707297"
-        
-        # Если пришло сообщение
-        if data.get("type") == "message_new":
-            message = data["object"]["message"]
-            text = message.get("text", "")
-            user_id = message.get("from_id", 0)
-            
-            # Просто печатаем в логи
-            print(f"Сообщение от {user_id}: {text}")
-            
-            # Если в тексте есть хоть что-то про анкету
-            if any(word in text.lower() for word in ["анкет", "опрос"]):
-                # Отправляем тебе уведомление
-                requests.post(
-                    "https://api.vk.com/method/messages.send",
-                    data={
-                        "peer_id": 388182166,
-                        "message": f"Кто-то заполнил анкету\nID: {user_id}\n\nПроверь виджет 'Анкеты'",
-                        "random_id": random.randint(1, 10**9),
-                        "access_token": TOKEN,
-                        "v": "5.131"
-                    }
-                )
+            # ВАЖНО: Возвращаем Response с plain text
+            return Response(content="10707297", media_type="text/plain")
     
     except:
         pass
     
-    return "ok"
+    # Для всех остальных запросов
+    return Response(content="ok", media_type="text/plain")
 
 @app.get("/callback")
 async def check():
