@@ -4,361 +4,261 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 import random
 import json
-import sys
+import os
 import re
 from datetime import datetime
-import os
 
 app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# Добавляем CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Настройки из переменных окружения
-TOKEN = os.getenv("VK_TOKEN", "vk1.a.sq5rMHr7_eVlqS9xPvZKC2faTUGZBGT0EeXkSYGIpw1dAe0a6Rrw_hHUSsicD21cRLAUcGd_hzA_BLd0R37aOa7fGCf9vpPkUwRT9uOJlSiMQHCZz397zimUVgVZz9jgV_OOv5vmX6I5aoRAMfCMm0NEgxMd9UgmFgISq_krk2fBhaWC5S6wjvki3apnVH19xScFwNFkOUELvD0DPJQNyA")
+# === КОНФИГ ===
+TOKEN = os.getenv("VK_TOKEN", "")
 GROUP_ID = int(os.getenv("VK_GROUP_ID", "235128907"))
-YOUR_ID = int(os.getenv("YOUR_VK_ID", "2000000001"))
+YOUR_ID = int(os.getenv("YOUR_VK_ID", "388182166"))
+CHAT_PEER_ID = int(os.getenv("CHAT_PEER_ID", "2000000001"))
+VK_API_VERSION = "5.199"
 
-# Принудительный сброс буфера логов
-import functools
-print = functools.partial(print, flush=True)
-
-@app.post("/form")
-async def form(request: Request):
-    """Старый endpoint для формы"""
-    try:
-        data = await request.json()
-    except:
-        return {"error": "Некорректный JSON"}
-
-    name = data.get("Имя", "")
-    gender = data.get("Пол", "")
-    age = data.get("Возраст", "")
-    country = data.get("Происхождение", "")
-    role = data.get("Позиция", "")
-    body = data.get("Телосложение", "")
-    height = data.get("Рост", "")
-    eye = data.get("Глаза", "")
-    wool = data.get("Шерсть", "")
-    ref = data.get("Ссылка на реф", "")
-    look = data.get("Внешность", "")
-    character = data.get("Характер", "")
-    character2 = data.get("Характер подробнее", "")
-    goals = data.get("Цели", "")
-    skills = data.get("Навыки", "")
-
-    text = f"""Новая заявка
-Имя: {name}
-Пол: {gender}
-Возраст: {age}
-Происхождение: {country}
-Позиция: {role}
-Телосложение: {body}
-Рост: {height}
-Глаза: {eye}
-Шерсть: {wool}
-Ссылка на реф: {ref}
-Внешность: {look}
-Характер: {character}
-Характер подробнее: {character2}
-Цели: {goals}
-Навыки: {skills}
-"""
-    try:
-        requests.post(
-            "https://api.vk.com/method/messages.send",
-            data={
-                "peer_id": YOUR_ID,
-                "message": text,
-                "random_id": random.randint(1, 10**9),
-                "access_token": TOKEN,
-                "v": "5.131"
-            }
-        )
-    except Exception as e:
-        return {"error": str(e)}
-
-    return {"ok": True}
+print("="*60)
+print("🚀 VK Анкета-бот запущен")
+print("="*60)
 
 @app.post("/callback")
 async def vk_callback(request: Request):
-    """Callback для ВК - парсим анкету по названию"""
-    print("\n" + "="*60)
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - НОВЫЙ ЗАПРОС")
-    print("="*60)
+    """Главный обработчик"""
+    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 📥 Запрос от VK")
     
     try:
-        # Получаем тело запроса
-        body_bytes = await request.body()
-        body_str = body_bytes.decode('utf-8', errors='ignore')
+        data = await request.json()
+        event_type = data.get("type")
         
-        print(f"Длина тела: {len(body_str)} символов")
-        
-        if not body_str or body_str.strip() == "":
-            print("Пустое тело, возвращаем ok")
-            return PlainTextResponse("ok")
-        
-        # Пробуем распарсить JSON
-        try:
-            data = json.loads(body_str)
-        except json.JSONDecodeError as e:
-            print(f"Ошибка парсинга JSON: {e}")
-            print(f"Тело запроса: {body_str[:500]}")
-            return PlainTextResponse("ok")
-        
-        print(f"Тип события: {data.get('type', 'неизвестно')}")
-        
-        # Подтверждение для ВК
-        if data.get("type") == "confirmation":
-            print(f"Запрос подтверждения для группы {data.get('group_id')}")
-            print("Отправляем код: 10707297")
+        # 1. Подтверждение
+        if event_type == "confirmation":
             return PlainTextResponse("10707297")
         
-        # Новое сообщение
-        if data.get("type") == "message_new":
+        # 2. Новое сообщение
+        elif event_type == "message_new":
             message = data["object"]["message"]
             text = message.get("text", "").strip()
             user_id = message.get("from_id", 0)
             
-            print(f"Сообщение от пользователя: {user_id}")
-            print(f"Текст ({len(text)} символов):")
-            print("-"*40)
-            print(text[:1000])
-            if len(text) > 1000:
-                print(f"... (еще {len(text)-1000} символов)")
-            print("-"*40)
+            print(f"👤 От: {user_id}")
+            print(f"📝 Длина текста: {len(text)} символов")
             
-            # Сохраняем оригинал для отладки
-            debug_filename = f"debug_{user_id}_{datetime.now().strftime('%H%M%S')}.txt"
-            with open(debug_filename, "w", encoding="utf-8") as f:
-                f.write(text)
-            print(f"Оригинал сохранен в {debug_filename}")
-            
-            # ПРОВЕРЯЕМ НАЗВАНИЕ АНКЕТЫ
-            if "Анкета" in text or "анкета" in text:
-                print("Найдена анкета! Парсим...")
+            # Проверяем анкету
+            if "Анкета Вашего персонажа" in text:
+                print("🎯 НАЙДЕНА АНКЕТА!")
                 
-                # Парсим данные
-                answers = parse_answers_from_text(text)
+                # Убираем лишнее
+                clean_text = clean_anketa_text(text)
                 
-                print(f"Распарсено {len(answers)} полей:")
-                for key, value in answers.items():
-                    if value:
-                        print(f"  {key}: {value[:80]}{'...' if len(value) > 80 else ''}")
+                # Парсим
+                answers = parse_anketa_exact(clean_text)
                 
-                # Формируем сообщение
-                formatted_message = create_formatted_application(answers, user_id)
-                
-                print("\nСформированное сообщение:")
-                print(formatted_message)
+                print(f"📊 Поля анкеты: {list(answers.keys())}")
                 
                 # Отправляем вам
-                try:
-                    send_result = send_vk_message(
-                        peer_id=YOUR_ID,
-                        message=formatted_message
-                    )
-                    if send_result:
-                        print("✅ Сообщение отправлено вам")
-                    else:
-                        print("❌ Ошибка отправки вам")
-                except Exception as e:
-                    print(f"❌ Ошибка при отправке вам: {str(e)}")
-                
-                # Ответ пользователю
-                try:
-                    send_result = send_vk_message(
-                        peer_id=user_id,
-                        message="✅ Ваша анкета персонажа получена и отправлена на проверку! Спасибо!"
-                    )
-                    if send_result:
-                        print("✅ Пользователю отправлено подтверждение")
-                    else:
-                        print("❌ Ошибка отправки пользователю")
-                except Exception as e:
-                    print(f"❌ Ошибка при отправке пользователю: {str(e)}")
+                if answers:
+                    message_to_you = format_full_anketa(answers, user_id)
+                    send_to_user(YOUR_ID, message_to_you, "Вам")
+                    
+                    # Отправляем в чат
+                    message_to_chat = format_chat_notification(answers, user_id)
+                    send_to_chat(message_to_chat)
+                else:
+                    print("⚠️ Анкета пустая или не распарсилась")
+                    # Отправляем сообщение об ошибке
+                    send_to_user(YOUR_ID, f"⚠️ Анкета от {user_id} не распарсилась\n\n{text[:500]}...", "Вам")
+            
             else:
-                print("Не анкета, игнорируем")
+                print("⏭️ Не анкета")
     
     except Exception as e:
-        print(f"❌ Критическая ошибка в callback: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Ошибка: {e}")
     
-    print("="*60 + "\n")
     return PlainTextResponse("ok")
 
-def parse_answers_from_text(text: str) -> dict:
-    """Парсит анкету из текста сообщения"""
-    answers = {}
-    
-    # Удаляем лишние пробелы и разбиваем на строки
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
-    
-    # Маппинг вопросов к полям
-    field_mapping = {
-        # Вопросы -> Поле
-        "имя": "Имя",
-        "имя персонажа": "Имя",
-        "пол": "Пол",
-        "пол персонажа": "Пол",
-        "возраст": "Возраст",
-        "возраст персонажа": "Возраст",
-        "происхождение": "Происхождение",
-        "позиция": "Позиция",
-        "позиция в племени": "Позиция",
-        "телосложение": "Телосложение",
-        "рост": "Рост",
-        "рост персонажа": "Рост",
-        "глаза": "Глаза",
-        "цвет глаз": "Глаза",
-        "шерсть": "Шерсть",
-        "цвет шерсти": "Шерсть",
-        "референс": "Ссылка на реф",
-        "ссылка": "Ссылка на реф",
-        "ссылка на референс": "Ссылка на реф",
-        "внешность": "Внешность",
-        "характер": "Характер",
-        "черты характера": "Характер",
-        "характер подробнее": "Характер подробнее",
-        "подробнее о характере": "Характер подробнее",
-        "цели": "Цели",
-        "планы": "Цели",
-        "навыки": "Навыки",
-        "таланты": "Навыки",
-        "история": "История"
-    }
-    
-    # Паттерны для поиска Q/A
-    patterns = [
-        r'(?:Q[:.]?|Вопрос[:.]?)\s*(.*?)\s*(?:A[:.]?|Ответ[:.]?)\s*(.*?)(?=(?:Q[:.]?|Вопрос[:.]?)|$)',
-        r'(.*?)[:]\s*\n?(.*?)(?=\n\s*(?:\w+[:]|Q|Вопрос|$))',
-        r'^(.*?)[-]\s*(.*?)$'
+def clean_anketa_text(text: str) -> str:
+    """Очистка текста анкеты от лишнего"""
+    # Удаляем заголовки и личные данные
+    lines_to_remove = [
+        "Новый ответ в опросе:",
+        "Анастасия Смоль",
+        "Диалог:",
+        "vk.com/id",
+        "vk.com/gim",
+        "?sel="
     ]
     
-    # Сначала пробуем найти Q/A форматы
-    for pattern in patterns:
-        matches = re.findall(pattern, text, re.DOTALL | re.IGNORECASE | re.MULTILINE)
-        if matches:
-            print(f"Найдено {len(matches)} пар вопрос-ответ")
-            for question, answer in matches:
-                question_clean = question.strip().lower()
-                answer_clean = answer.strip()
-                
-                # Ищем подходящее поле
-                for question_key, field_name in field_mapping.items():
-                    if question_key in question_clean:
-                        answers[field_name] = answer_clean
-                        break
+    clean = text
+    for line in lines_to_remove:
+        clean = clean.replace(line, "")
     
-    # Если Q/A не нашли, пробуем парсить по ключевым словам
-    if not answers:
-        current_field = None
-        current_answer = []
+    return clean.strip()
+
+def parse_anketa_exact(text: str) -> dict:
+    """Точный парсинг анкеты формата Q: A:"""
+    answers = {}
+    
+    # Паттерн для Q: вопрос A: ответ
+    pattern = r'Q[:.]\s*(.*?)\s*A[:.]\s*(.*?)(?=Q[:.]|$)'
+    matches = re.findall(pattern, text, re.DOTALL)
+    
+    print(f"🔍 Найдено пар Q/A: {len(matches)}")
+    
+    # Точное соответствие
+    field_mapping = {
+        "Имя персонажа (полное, со знаками ударения), сокращения, клички": "Имя",
+        "Пол персонажа": "Пол",
+        "Возраст персонажа (в формате n лет m месяцев)": "Возраст",
+        "Происхождение (для лайоров - горец/горянка, помор/поморка)": "Происхождение",
+        "Позиция в племени": "Позиция",
+        "Телосложение (кратко)": "Телосложение",
+        "Рост персонажа": "Рост",
+        "Цвет глаз (кратко)": "Глаза",
+        "Цвет шерсти (кратко)": "Шерсть",
+        "Ссылка на референс в альбоме основной группы": "Ссылка на реф",
+        "Внешность, отличительные черты и поведение": "Внешность",
+        "Основные черты характера через запятую": "Характер",
+        "Подробнее о характере": "Характер подробнее",
+        "Цели и планы персонажа на ближайшее будущее": "Цели",
+        "Здесь Вы можете написать историю персонажа:": "История",
+        "Навыки, таланты, недостатки": "Навыки"
+    }
+    
+    for question, answer in matches:
+        question = question.strip()
+        answer = answer.strip()
         
-        for line in lines:
-            line_lower = line.lower()
-            
-            # Проверяем, начинается ли строка с вопроса
-            found_field = None
-            for question_key, field_name in field_mapping.items():
-                if line_lower.startswith(question_key) or f": {question_key}" in line_lower:
-                    found_field = field_name
-                    break
-            
-            if found_field:
-                # Сохраняем предыдущий ответ
-                if current_field and current_answer:
-                    answers[current_field] = ' '.join(current_answer).strip()
-                
-                # Начинаем новый ответ
-                current_field = found_field
-                current_answer = []
-                
-                # Пытаемся извлечь ответ из той же строки
-                parts = line.split(':', 1)
-                if len(parts) > 1:
-                    current_answer.append(parts[1].strip())
-            elif current_field:
-                # Продолжаем собирать ответ
-                current_answer.append(line)
+        # Ищем точное соответствие
+        for q_template, field in field_mapping.items():
+            if question == q_template:
+                answers[field] = answer
+                print(f"   ✅ {field}: {answer[:50]}{'...' if len(answer) > 50 else ''}")
+                break
         
-        # Не забываем последний ответ
-        if current_field and current_answer:
-            answers[current_field] = ' '.join(current_answer).strip()
+        # Если не нашли точного, ищем по части
+        if not any(q_template in question for q_template in field_mapping.keys()):
+            print(f"   ⚠️ Неизвестный вопрос: '{question[:50]}...'")
     
     return answers
 
-def create_formatted_application(answers: dict, user_id: int) -> str:
-    """Создаёт анкету в нужном формате"""
-    return f"""Новая заявка (от VK ID: {user_id})
-Имя: {answers.get("Имя", "")}
-Пол: {answers.get("Пол", "")}
-Возраст: {answers.get("Возраст", "")}
-Происхождение: {answers.get("Происхождение", "")}
-Позиция: {answers.get("Позиция", "")}
-Телосложение: {answers.get("Телосложение", "")}
-Рост: {answers.get("Рост", "")}
-Глаза: {answers.get("Глаза", "")}
-Шерсть: {answers.get("Шерсть", "")}
-Ссылка на реф: {answers.get("Ссылка на реф", "")}
-Внешность: {answers.get("Внешность", "")}
-Характер: {answers.get("Характер", "")}
-Характер подробнее: {answers.get("Характер подробнее", "")}
-Цели: {answers.get("Цели", "")}
-Навыки: {answers.get("Навыки", "")}
+def format_full_anketa(answers: dict, user_id: int) -> str:
+    """Полная анкета для модератора"""
+    fields = [
+        ("Имя", "👤"),
+        ("Пол", "⚧️"),
+        ("Возраст", "🎂"),
+        ("Происхождение", "🌍"),
+        ("Позиция", "🏹"),
+        ("Телосложение", "💪"),
+        ("Рост", "📏"),
+        ("Глаза", "👁️"),
+        ("Шерсть", "🐾"),
+        ("Ссылка на реф", "🔗"),
+        ("Внешность", "🎭"),
+        ("Характер", "🧠"),
+        ("Характер подробнее", "📖"),
+        ("Цели", "🎯"),
+        ("Навыки", "🛠️"),
+        ("История", "📜")
+    ]
+    
+    lines = [
+        f"🎯 НОВАЯ АНКЕТА",
+        f"👤 От: VK ID {user_id}",
+        f"🕒 {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}",
+        ""
+    ]
+    
+    for field_name, emoji in fields:
+        if field_name in answers:
+            value = answers[field_name]
+            lines.append(f"{emoji} {field_name}: {value}")
+        else:
+            lines.append(f"{emoji} {field_name}: —")
+    
+    lines.append(f"\n📝 ID анкеты: {user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}")
+    
+    return "\n".join(lines)
+
+def format_chat_notification(answers: dict, user_id: int) -> str:
+    """Краткое уведомление для чата"""
+    name = answers.get("Имя", "Не указано")
+    gender = answers.get("Пол", "Не указано")
+    age = answers.get("Возраст", "Не указано")
+    
+    return f"""🎯 НОВАЯ АНКЕТА!
+
+👤 Персонаж: {name}
+⚧️ Пол: {gender}
+🎂 Возраст: {age}
+
+📝 Анкета отправлена на модерацию.
+🕒 {datetime.now().strftime('%H:%M')}
 """
 
-def send_vk_message(peer_id: int, message: str) -> bool:
-    """Отправляет сообщение через VK API"""
+def send_to_user(user_id: int, message: str, recipient: str = "") -> bool:
+    """Отправка личного сообщения"""
     try:
         response = requests.post(
             "https://api.vk.com/method/messages.send",
             data={
-                "peer_id": peer_id,
+                "user_id": user_id,
                 "message": message,
                 "random_id": random.randint(1, 10**9),
                 "access_token": TOKEN,
-                "v": "5.131"
-            },
-            timeout=10
+                "v": VK_API_VERSION
+            }
         )
         
         result = response.json()
-        if "error" in result:
-            print(f"VK API ошибка: {result['error']}")
+        if "error" not in result:
+            print(f"✅ Отправлено {recipient}")
+            return True
+        else:
+            print(f"❌ Ошибка {recipient}: {result.get('error')}")
             return False
-        
-        return True
-        
+            
     except Exception as e:
-        print(f"Ошибка отправки сообщения: {str(e)}")
+        print(f"❌ Ошибка отправки: {e}")
         return False
 
-@app.get("/callback")
-async def check():
-    """GET endpoint для проверки"""
-    return {"status": "сервер работает", "code": "10707297", "group_id": GROUP_ID}
+def send_to_chat(message: str) -> bool:
+    """Отправка в чат"""
+    try:
+        response = requests.post(
+            "https://api.vk.com/method/messages.send",
+            data={
+                "peer_id": CHAT_PEER_ID,
+                "message": message,
+                "random_id": random.randint(1, 10**9),
+                "access_token": TOKEN,
+                "v": VK_API_VERSION
+            }
+        )
+        
+        result = response.json()
+        if "error" not in result:
+            print("✅ Отправлено в чат")
+            return True
+        else:
+            print(f"❌ Ошибка чата: {result.get('error')}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Ошибка чата: {e}")
+        return False
 
 @app.get("/")
 async def root():
-    """Корневой endpoint"""
-    return {
-        "статус": "VK Bot активен",
-        "group_id": GROUP_ID,
-        "endpoints": ["/", "/callback", "/form"],
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "VK Bot активен", "time": datetime.now().isoformat()}
 
-@app.get("/test")
-async def test_endpoint():
-    """Тестовый endpoint для проверки"""
-    test_text = """Анкета Вашего персонажа для РП сегмента проекта Эхо Севера
+@app.get("/test-parse")
+async def test_parse():
+    """Тест парсинга"""
+    test_anketa = """Новый ответ в опросе: Анкета Вашего персонажа для РП сегмента проекта Эхо Севера
+Анастасия Смоль vk.com/id388182166
+Диалог: vk.com/gim235128907?sel=388182166
 
 Q: Имя персонажа (полное, со знаками ударения), сокращения, клички
 A: Тестовое Имя
@@ -391,31 +291,33 @@ Q: Ссылка на референс в альбоме основной гру�
 A: https://vk.com/photo...
 
 Q: Внешность, отличительные черты и поведение
-A: Шрамы на морде, хромает на левую лапу
+A: Шрамы на морде
 
 Q: Основные черты характера через запятую
-A: Храбрый, упрямый, верный
+A: Храбрый, упрямый
 
 Q: Подробнее о характере
-A: Очень предан племени, но иногда слишком импульсивен
+A: Очень предан племени
 
 Q: Цели и планы персонажа на ближайшее будущее
-A: Стать лидером охотничьего отряда
+A: Стать лидером
+
+Q: Здесь Вы можете написать историю персонажа:
+A: История тест
 
 Q: Навыки, таланты, недостатки
-A: Отличный охотник, плохо плавает"""
+A: Отличный охотник"""
     
-    answers = parse_answers_from_text(test_text)
-    formatted = create_formatted_application(answers, 123456)
+    clean = clean_anketa_text(test_anketa)
+    answers = parse_anketa_exact(clean)
     
     return {
         "parsed": answers,
-        "formatted": formatted,
-        "fields_count": len(answers)
+        "fields_count": len(answers),
+        "all_fields_found": len(answers) == 16
     }
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
