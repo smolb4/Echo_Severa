@@ -62,49 +62,38 @@ async def form(request: Request):
 
     return {"ok": True}
 
-
+# ========== CALLBACK ДЛЯ ВК ==========
 @app.post("/callback")
 async def vk_callback(request: Request):
-    """Callback для ВКонтакте"""
+    """Callback API для ВКонтакте"""
     try:
         # Пытаемся прочитать JSON
         data = await request.json()
         
-        # Если это проверка от ВК
+        # Если это запрос подтверждения от ВК
         if data.get("type") == "confirmation":
-            print("VK confirmation request received")
-            return "10707297"  # ← ВОЗВРАЩАЕМ КОД СТРОКОЙ!
-        
-        # Логируем что пришло
-        print(f"VK callback data: {data}")
-        
-    except Exception as e:
-        # Если ошибка - все равно возвращаем код
-        print(f"Error in callback: {e}")
-    
-    # Всегда возвращаем "ok" для ВК
-    return "ok"
-
-@app.post("/callback", response_class=PlainTextResponse)  # ← ВАЖНО!
-async def vk_callback(request: Request):
-    """Возвращаем код подтверждения БЕЗ кавычек"""
-    try:
-        data = await request.json()
-        if data.get("type") == "confirmation":
-            # Возвращаем просто строку, FastAPI не добавит кавычки
-            return "10707297"
+            # ВОЗВРАЩАЕМ ПРОСТО СТРОКУ БЕЗ JSON!
+            from fastapi.responses import PlainTextResponse
+            return PlainTextResponse("10707297")
+            
     except:
+        # Если ошибка чтения JSON, всё равно возвращаем код
         pass
     
-    # Для всех других запросов
-    return "ok"
+    # Для всех остальных запросов возвращаем "ok"
+    return PlainTextResponse("ok")
 
 @app.get("/callback")
 async def check_callback():
-    """Для проверки в браузере - оставляем как есть"""
+    """GET endpoint для проверки в браузере"""
     return {
         "status": "callback endpoint works",
         "confirmation_code": "10707297",
         "post_url": "https://echosevera-production-5f24.up.railway.app/callback",
         "method": "POST"
     }
+
+@app.get("/")
+async def root():
+    """Главная страница для проверки сервера"""
+    return {"status": "VK Form Bot работает", "timestamp": "2024-01-16"}
