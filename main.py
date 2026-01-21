@@ -1,161 +1,275 @@
-# main.py
-from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse
+# main.py - ПРОСТАЯ ВЕБ-ФОРМА БЕЗ ЭМОДЗИ
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse, PlainTextResponse
 import requests
 import random
 import json
 import os
 import re
+from datetime import datetime
 
 app = FastAPI()
 
 # Конфигурация
 TOKEN = os.environ.get("VK_TOKEN", "vk1.a.sq5rMHr7_eVlqS9xPvZKC2faTUGZBGT0EeXkSYGIpw1dAe0a6Rrw_hHUSsicD21cRLAUcGd_hzA_BLd0R37aOa7fGCf9vpPkUwRT9uOJlSiMQHCZz397zimUVgVZz9jgV_OOv5vmX6I5aoRAMfCMm0NEgxMd9UgmFgISq_krk2fBhaWC5S6wjvki3apnVH19xScFwNFkOUELvD0DPJQNyA")
-CHAT_PEER_ID = 2000000001  # Ваш чат
-CONFIRMATION_CODE = "744eebe2"
-GROUP_ID = 235128907
+CHAT_ID = 2000000001  # ID вашего чата
 
-print(f"Сервер запущен. Токен: {'ЕСТЬ' if TOKEN else 'НЕТ'}")
+print(f"Сервер запущен")
 
-@app.post("/callback")
-async def vk_callback(request: Request):
-    """Обработчик ВСЕХ сообщений из группы"""
-    print("\n" + "="*50)
-    print("Запрос от VK")
+# =================== ВЕБ-ФОРМА ===================
+@app.get("/", response_class=HTMLResponse)
+async def home():
+    """Главная страница с формой"""
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Отправка анкеты в чат</title>
+        <style>
+            body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; }
+            h1 { color: #333; }
+            textarea { 
+                width: 100%; 
+                height: 400px; 
+                padding: 10px; 
+                font-size: 14px; 
+                border: 2px solid #ddd;
+                border-radius: 5px;
+                font-family: monospace;
+            }
+            button { 
+                background: #007bff; 
+                color: white; 
+                border: none; 
+                padding: 12px 24px; 
+                font-size: 16px; 
+                cursor: pointer; 
+                margin-top: 10px;
+                border-radius: 5px;
+            }
+            button:hover { background: #0056b3; }
+            .result { 
+                margin-top: 20px; 
+                padding: 15px; 
+                border-radius: 5px;
+                display: none;
+            }
+            .success { 
+                background: #d4edda; 
+                color: #155724; 
+                border: 1px solid #c3e6cb;
+            }
+            .error { 
+                background: #f8d7da; 
+                color: #721c24; 
+                border: 1px solid #f5c6cb;
+            }
+            .info { 
+                background: #d1ecf1; 
+                color: #0c5460; 
+                border: 1px solid #bee5eb;
+                margin-bottom: 20px;
+                padding: 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Отправка анкеты в чат VK</h1>
+        
+        <div class="info">
+            <strong>Как использовать:</strong><br>
+            1. Скопируйте анкету из VK<br>
+            2. Вставьте в поле ниже<br>
+            3. Нажмите "Отправить в чат"<br>
+            4. Сообщение придет в указанный чат
+        </div>
+        
+        <form id="anketaForm">
+            <textarea name="anketa_text" placeholder="Вставьте сюда текст анкеты из VK..."></textarea>
+            <br>
+            <button type="submit">Отправить в чат</button>
+        </form>
+        
+        <div id="result" class="result"></div>
+        
+        <script>
+        document.getElementById('anketaForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const textarea = form.querySelector('textarea');
+            const button = form.querySelector('button');
+            const resultDiv = document.getElementById('result');
+            
+            const originalText = button.textContent;
+            const anketaText = textarea.value.trim();
+            
+            if (!anketaText) {
+                resultDiv.innerHTML = '<div class="error">Введите текст анкеты</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+            
+            button.textContent = 'Отправка...';
+            button.disabled = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('anketa_text', anketaText);
+                
+                const response = await fetch('/send-anketa', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `<div class="success">
+                        <strong>Успешно отправлено!</strong><br>
+                        Распарсено полей: ${result.fields_count}<br>
+                        Имя персонажа: ${result.name}<br>
+                        Сообщение отправлено в чат
+                    </div>`;
+                    
+                    // Очищаем поле
+                    textarea.value = '';
+                } else {
+                    resultDiv.innerHTML = `<div class="error">
+                        <strong>Ошибка:</strong><br>
+                        ${result.error}
+                    </div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">
+                    Ошибка соединения с сервером
+                </div>`;
+            }
+            
+            resultDiv.style.display = 'block';
+            button.textContent = originalText;
+            button.disabled = false;
+            
+            // Прокручиваем к результату
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        });
+        </script>
+    </body>
+    </html>
+    """
+
+@app.post("/send-anketa")
+async def send_anketa(anketa_text: str = Form(...)):
+    """Обработка анкеты из формы"""
+    print(f"\nПолучена анкета, {len(anketa_text)} символов")
     
     try:
-        data = await request.json()
-        print(f"Тип: {data.get('type')}")
+        # Парсим анкету
+        parsed = parse_anketa(anketa_text)
         
-        # Подтверждение
-        if data.get("type") == "confirmation":
-            print(f"Код: {CONFIRMATION_CODE}")
-            return PlainTextResponse(CONFIRMATION_CODE)
+        if not parsed:
+            return {"success": False, "error": "Не удалось распарсить анкету"}
         
-        # Новое сообщение
-        elif data.get("type") == "message_new":
-            message = data["object"]["message"]
-            text = message.get("text", "")
-            user_id = message.get("from_id", 0)
+        print(f"Распарсено полей: {len(parsed)}")
+        
+        # Формируем сообщение для чата
+        name = parsed.get("Имя", "Не указано")
+        gender = parsed.get("Пол", "Не указано")
+        age = parsed.get("Возраст", "Не указано")
+        position = parsed.get("Позиция", "Не указано")
+        
+        # Простое сообщение без эмодзи
+        message = f"""НОВАЯ АНКЕТА
+
+Персонаж: {name}
+Пол: {gender}
+Возраст: {age}
+Позиция: {position}
+
+Отправлено через веб-форму
+Время: {datetime.now().strftime('%H:%M')}"""
+        
+        # Отправляем в чат
+        if TOKEN:
+            result = send_to_chat(message)
             
-            print(f"От: {user_id}")
-            print(f"Текст: {text[:300]}...")
-            
-            # ПРОВЕРЯЕМ ЛЮБЫЕ СООБЩЕНИЯ С АНКЕТОЙ
-            # Ищем признаки анкеты
-            if any(keyword in text for keyword in ["Q: Имя персонажа", "Анкета Вашего персонажа", "Новый ответ в опросе"]):
-                print("✓ Найдена анкета!")
-                
-                # Парсим анкету
-                parsed = parse_simple_anketa(text)
-                
-                if parsed:
-                    print(f"Распарсено полей: {len(parsed)}")
-                    
-                    # Формируем сообщение для чата
-                    name = parsed.get("Имя", "Не указано")
-                    gender = parsed.get("Пол", "Не указано")
-                    age = parsed.get("Возраст", "Не указано")
-                    
-                    msg = f"Новая анкета!\n\nПерсонаж: {name}\nПол: {gender}\nВозраст: {age}"
-                    
-                    # Отправляем в чат
-                    success = send_to_chat(msg)
-                    
-                    if success:
-                        print("✓ Отправлено в чат")
-                    else:
-                        print("✗ Ошибка отправки")
-                else:
-                    print("✗ Не удалось распарсить")
-                    
-                    # Всё равно отправляем уведомление
-                    send_to_chat("Получена новая анкета (ошибка парсинга)")
+            if result and "error" not in result:
+                return {
+                    "success": True,
+                    "fields_count": len(parsed),
+                    "name": name[:50]
+                }
             else:
-                print("✗ Не анкета (пропускаем)")
-    
+                return {"success": False, "error": "Ошибка отправки в VK"}
+        else:
+            return {"success": False, "error": "Токен VK не установлен"}
+            
     except Exception as e:
         print(f"Ошибка: {e}")
-    
-    print("="*50)
-    return PlainTextResponse("ok")
+        return {"success": False, "error": "Внутренняя ошибка сервера"}
 
-def parse_simple_anketa(text: str) -> dict:
-    """Простой парсинг анкеты"""
+# =================== ПАРСИНГ ===================
+def parse_anketa(text: str) -> dict:
+    """Парсинг анкеты из виджета VK"""
     answers = {}
     
-    # Ищем все Q: A:
-    lines = text.split('\n')
+    # Ищем все Q: A: пары
+    pattern = r'Q:\s*(.*?)\s*A:\s*(.*?)(?=\s*Q:\s*|$)'
+    matches = re.findall(pattern, text, re.DOTALL)
     
-    current_question = ""
-    current_answer = []
-    in_answer = False
+    print(f"Найдено Q/A пар: {len(matches)}")
     
-    for line in lines:
-        line = line.strip()
+    # Маппинг вопросов
+    mapping = {
+        "Имя персонажа (полное, со знаками ударения), сокращения, клички": "Имя",
+        "Пол персонажа": "Пол",
+        "Возраст персонажа (в формате n лет m месяцев)": "Возраст",
+        "Происхождение (для лайоров - горец/горянка, помор/поморка)": "Происхождение",
+        "Позиция в племени": "Позиция",
+        "Телосложение (кратко)": "Телосложение",
+        "Рост персонажа": "Рост",
+        "Цвет глаз (кратко)": "Глаза",
+        "Цвет шерсти (кратко)": "Шерсть",
+        "Ссылка на референс в альбоме основной группы": "Ссылка на реф",
+        "Внешность, отличительные черты и поведение": "Внешность",
+        "Основные черты характера через запятую": "Характер",
+        "Подробнее о характере": "Характер подробнее",
+        "Цели и планы персонажа на ближайшее будущее": "Цели",
+        "Здесь Вы можете написать историю персонажа:": "История",
+        "Навыки, таланты, недостатки": "Навыки",
+    }
+    
+    for question, answer in matches:
+        question = question.strip()
+        answer = answer.strip()
         
-        if line.startswith("Q:"):
-            # Сохраняем предыдущий
-            if current_question and current_answer:
-                answers[current_question] = " ".join(current_answer)
-            
-            # Новый вопрос
-            current_question = line[2:].strip()
-            current_answer = []
-            in_answer = False
-            
-        elif line.startswith("A:"):
-            current_answer.append(line[2:].strip())
-            in_answer = True
-            
-        elif in_answer and line:
-            current_answer.append(line)
+        # Ищем точное соответствие
+        for q_template, field in mapping.items():
+            if q_template == question:
+                answers[field] = answer
+                print(f"  {field}: {answer[:50]}")
+                break
     
-    # Последний вопрос
-    if current_question and current_answer:
-        answers[current_question] = " ".join(current_answer)
-    
-    # Преобразуем вопросы в стандартные поля
-    result = {}
-    
-    for question, answer in answers.items():
-        q_lower = question.lower()
-        
-        if "имя" in q_lower:
-            result["Имя"] = answer
-        elif "пол" in q_lower:
-            result["Пол"] = answer
-        elif "возраст" in q_lower:
-            result["Возраст"] = answer
-        elif "происхождение" in q_lower:
-            result["Происхождение"] = answer
-        elif "позиция" in q_lower:
-            result["Позиция"] = answer
-        elif "телосложение" in q_lower:
-            result["Телосложение"] = answer
-        elif "рост" in q_lower:
-            result["Рост"] = answer
-        elif "глаз" in q_lower:
-            result["Глаза"] = answer
-        elif "шерсть" in q_lower:
-            result["Шерсть"] = answer
-    
-    return result
+    return answers
 
-def send_to_chat(message: str) -> bool:
-    """Отправка в чат"""
+# =================== ОТПРАВКА ===================
+def send_to_chat(message: str):
+    """Отправка сообщения в чат"""
     if not TOKEN:
-        print("✗ Нет токена")
-        return False
+        print("Ошибка: токен не установлен")
+        return {"error": "Токен не установлен"}
     
     try:
         params = {
             "access_token": TOKEN,
-            "peer_id": CHAT_PEER_ID,
+            "peer_id": CHAT_ID,
             "message": message,
             "random_id": random.randint(1, 10**9),
             "v": "5.199"
         }
+        
+        print(f"Отправка в чат {CHAT_ID}")
         
         response = requests.post(
             "https://api.vk.com/method/messages.send",
@@ -164,28 +278,48 @@ def send_to_chat(message: str) -> bool:
         )
         
         result = response.json()
+        print(f"Ответ VK: {result}")
         
-        if "error" in result:
-            print(f"Ошибка VK: {result['error']}")
-            return False
-        return True
+        return result
         
     except Exception as e:
-        print(f"Ошибка: {e}")
-        return False
+        print(f"Ошибка отправки: {e}")
+        return {"error": str(e)}
 
-@app.get("/")
-async def root():
-    return {"status": "сервер работает"}
-
+# =================== ТЕСТЫ ===================
 @app.get("/test")
 async def test():
     """Тест отправки"""
     if TOKEN:
-        success = send_to_chat("Тест бота - работает!")
-        return {"status": "отправлено" if success else "ошибка"}
+        result = send_to_chat(f"Тест бота {datetime.now().strftime('%H:%M:%S')}")
+        return {"result": result}
     else:
-        return {"error": "нет токена"}
+        return {"error": "токен не установлен"}
+
+@app.get("/check")
+async def check():
+    """Проверка сервера"""
+    return {
+        "status": "работает",
+        "time": datetime.now().isoformat(),
+        "has_token": bool(TOKEN),
+        "chat_id": CHAT_ID
+    }
+
+# =================== CALLBACK ===================
+@app.post("/callback")
+async def callback_handler(request: Request):
+    """Обработчик для VK"""
+    try:
+        data = await request.json()
+        
+        if data.get("type") == "confirmation":
+            return PlainTextResponse("744eebe2")
+            
+    except:
+        pass
+    
+    return PlainTextResponse("ok")
 
 if __name__ == "__main__":
     import uvicorn
