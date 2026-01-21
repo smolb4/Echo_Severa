@@ -80,10 +80,10 @@ async def home():
         
         <div class="info">
             <strong>Как использовать:</strong><br>
-            1. Скопируйте анкету из VK<br>
-            2. Вставьте в поле ниже<br>
-            3. Нажмите "Отправить в чат"<br>
-            4. Сообщение придет в указанный чат
+            1. Скопируй анкету из VK<br>
+            2. Вставь в поле ниже<br>
+            3. Нажми "Отправить в чат"<br>
+            4. Сообщение придет в чат "Анкеты | РП | Эхо Севера"
         </div>
         
         <form id="anketaForm">
@@ -336,3 +336,4 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
