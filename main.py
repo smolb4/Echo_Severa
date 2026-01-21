@@ -190,8 +190,7 @@ async def send_anketa(request: Request):  # Убрали Form, заменили 
         age = parsed.get("Возраст", "Не указано")
         position = parsed.get("Позиция", "Не указано")
         
-         message = f"""
-Имя: {parsed.get("Имя", "")}
+         message = f"""Имя: {parsed.get("Имя", "")}
 Пол: {parsed.get("Пол", "")}
 Возраст: {parsed.get("Возраст", "")}
 Происхождение: {parsed.get("Происхождение", "")}
@@ -375,5 +374,6 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
 
 
