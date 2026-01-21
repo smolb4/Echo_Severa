@@ -131,9 +131,7 @@ async def home():
                 if (result.success) {
                     resultDiv.innerHTML = `<div class="success">
                         <strong>Успешно отправлено!</strong><br>
-                        Распарсено полей: ${result.fields_count}<br>
                         Имя персонажа: ${result.name}<br>
-                        Сообщение отправлено в чат
                     </div>`;
                     
                     // Очищаем поле
@@ -374,6 +372,7 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
 
 
 
