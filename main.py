@@ -1,5 +1,5 @@
 # main.py - ПРОСТАЯ ВЕБ-ФОРМА БЕЗ ЭМОДЗИ
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Body  # Заменили Form на Body
 from fastapi.responses import HTMLResponse, PlainTextResponse
 import requests
 import random
@@ -20,6 +20,7 @@ print(f"Сервер запущен")
 @app.get("/", response_class=HTMLResponse)
 async def home():
     """Главная страница с формой"""
+    # ... (HTML-код формы остаётся БЕЗ ИЗМЕНЕНИЙ, как у вас в примере) ...
     return """
     <!DOCTYPE html>
     <html>
@@ -94,6 +95,7 @@ async def home():
         <div id="result" class="result"></div>
         
         <script>
+        // ВАЖНОЕ ИЗМЕНЕНИЕ В ФРОНТЕНДЕ: отправляем JSON, а не FormData
         document.getElementById('anketaForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -115,12 +117,13 @@ async def home():
             button.disabled = true;
             
             try {
-                const formData = new FormData();
-                formData.append('anketa_text', anketaText);
-                
+                // Отправляем данные в формате JSON
                 const response = await fetch('/send-anketa', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ anketa_text: anketaText })
                 });
                 
                 const result = await response.json();
@@ -159,9 +162,17 @@ async def home():
     </html>
     """
 
+# ВАЖНОЕ ИЗМЕНЕНИЕ В БЭКЕНДЕ: получаем данные из JSON-тела
 @app.post("/send-anketa")
-async def send_anketa(anketa_text: str = Form(...)):
+async def send_anketa(request: Request):  # Убрали Form, заменили на Request
     """Обработка анкеты из формы"""
+    try:
+        # Получаем тело запроса как JSON
+        data = await request.json()
+        anketa_text = data.get("anketa_text", "")
+    except:
+        return {"success": False, "error": "Неверный формат данных"}
+    
     print(f"\nПолучена анкета, {len(anketa_text)} символов")
     
     try:
